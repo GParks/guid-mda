@@ -4,14 +4,14 @@ and the MD5 hash of the same [values]?
 
 # Current Implementation
 
-* **`gradle run`**
-with no arguments, default to 5 (new) UUIDs, create and save [default file `uuids.json`]
-** `-c <count>`
-create _`<count>`_ UUID values
-** `-o <output filename>`
+* **`gradle run`** <br>with no arguments, default to 5 (new) UUIDs, create and save [default file `uuids.json`]
 
-** `-f <input filename>`
-read UUIDs from file rather than creating new
+    * `-c <count>`
+        create _`<count>`_ UUID values
+    * `-o <output filename>`
+
+    * `-f <input filename>`
+        read UUIDs from file rather than creating new
 
 Currently, no statistical analysis is done.
 
