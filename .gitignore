@@ -5,7 +5,9 @@
 build
 
 *.*~
+
+*.pages
 *.log
 
 **/.DS_Store
-Initial Cmds.pages
+gp-encode.py

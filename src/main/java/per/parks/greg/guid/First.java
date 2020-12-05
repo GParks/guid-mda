@@ -1,7 +1,7 @@
 package per.parks.greg.guid;
 
 // https://github.com/kohsuke/args4j/blob/master/args4j/examples/SampleMain.java
-import static org.kohsuke.args4j.ExampleMode.ALL;
+// import static org.kohsuke.args4j.ExampleMode.ALL;
 import org.kohsuke.args4j.Argument;
 import org.kohsuke.args4j.CmdLineException;
 import org.kohsuke.args4j.CmdLineParser;
@@ -41,12 +41,21 @@ class MyUUID_Deserializer implements JsonDeserializer<MyUUID> {
     java.util.UUID n = java.util.UUID.fromString(sUUID);
     MyUUID r = new MyUUID(n);
     if (!r.ck_sum(bi)) {
-      // throw some exception here
+      throw new JsonDataValException();
     }
+    // DEBUG
+    // System.out.println("  \t    MyUUID_Deserializer::deserialize <MyUUID>:" + r.toString());
     return r;
   }
 }
 
+// superfluous!!
+class MyUUID_Inst_Creator implements com.google.gson.InstanceCreator<MyUUID> {
+   public MyUUID createInstance(java.lang.reflect.Type type)
+   {
+      return new MyUUID(UUID.fromString("00000000-0000-0000-0000-000000000000"));
+   }
+}
 
 public class First
 {
@@ -61,9 +70,15 @@ public class First
 
   protected MyUUID uuids[];
 
-  First() {
-    System.out.println("First ctor");
-  }
+  protected BigInteger md5s[];
+
+  // for debugging
+  private final int dbgLvl = 4;
+
+  //  I don't think I need the constructor, anymore, ... for now
+  // First() {
+  //   System.out.println("First ctor");
+  // }
 
   //
   // create a number of GUIDs, count is a cmd. line arg
@@ -108,13 +123,15 @@ public class First
       BigInteger biTotal = new BigInteger(Long.toHexString(hi) + Long.toHexString(lo), 16);
 
 
-      System.out.println("\t" + i + ": " + uuid + ", \t" + lo + ", " + hi);
-      System.out.println("\t    " + Long.toHexString(hi) + " "
-			   + Long.toHexString(lo));
-      System.out.println("\t   0x" + biTotal.toString(16));
-      // System.out.println("    - OR - " + biTotal.not().toString(16) );
-      // biHi.negate().add(BigInteger.ONE).shiftLeft(64).toString(16) + "\n");
-      System.out.println("\t = " + biTotal + "\n");
+      if (dbgLvl >= 7) {
+        System.out.println("\t" + i + ": " + uuid + ", \t" + lo + ", " + hi);
+        System.out.println("\t    " + Long.toHexString(hi) + " "
+  			   + Long.toHexString(lo));
+        System.out.println("\t   0x" + biTotal.toString(16));
+        // System.out.println("    - OR - " + biTotal.not().toString(16) );
+        // biHi.negate().add(BigInteger.ONE).shiftLeft(64).toString(16) + "\n");
+        System.out.println("\t = " + biTotal + "\n");
+      }
     }
   }
 
@@ -134,8 +151,13 @@ public class First
   public boolean deserialize() {
     boolean retval = true;
 
+    if (dbgLvl >= 9) {
+      System.out.println("    \t   First::deserialize");
+    }
+
     GsonBuilder gb = new GsonBuilder();
     gb.registerTypeAdapter(MyUUID.class, new MyUUID_Deserializer());
+    // gb.registerTypeAdapter(MyUUID.class, new MyUUID_Inst_Creator());
     Gson g = gb.create();
 
     FileReader fr = null;
@@ -157,10 +179,67 @@ public class First
       retval = false;
     }
     if (null != sb) {
-      uuids = g.fromJson(sb.toString(), MyUUID[].class);
-    }
+      try {
+        if (dbgLvl >= 9) {
+          System.out.format("    \t   First::deserialize - StringBuilder is %d characters\n", sb.length());
+        }
 
+        uuids = g.fromJson(sb.toString(), MyUUID[].class);
+        count = uuids.length;
+        if (dbgLvl >= 9) {
+          System.out.format("    \t   First::deserialize - array length = %d\n", uuids.length);
+        }
+      } catch (JsonDataValException jdv) {
+        System.err.println("\tparsing the JSON to MyUUIDs failed!");
+        retval = false;
+      }
+    } else {
+      if (dbgLvl >= 9) {
+        System.out.println("    \t   First::deserialize -- StringBuilder sb is null!!");
+      }
+
+    }
+    if (retval && dbgLvl > 6) {
+      int cnt = 0;
+      for(MyUUID u: uuids) {
+        System.out.println("    \t    " + u.toString());
+        cnt++;
+      }
+      System.out.println("    \t count = " + Integer.toString(cnt));
+    }
     return retval;
+  }
+
+  protected void hash() {
+    md5s = new BigInteger[count];
+    for(int i=0; i<count; i++) {
+      md5s[i] = uuids[i].hash();
+
+    }
+  }
+
+  protected void analyze() {
+    // sort,
+
+    java.util.Arrays.sort(uuids);
+    BigInteger dists[] = new BigInteger[count-1];
+    // report min, max, "distribution"
+    // (TO DO: more to follow)
+    for(int i=0; i<count-1; i++) {
+      dists[i] = uuids[i+1].delta(uuids[i]);
+    }
+    // see README for notes and future direction
+    BigInteger min = uuids[0].asBigInt(), max = uuids[count-1].asBigInt();
+    System.out.format("  First analysis:  minimum value = %s; max = %s\n    distribution(s):\n",
+                      min.toString(),
+                      max.toString());
+    for(BigInteger b: dists) {
+      System.out.println("\t " + b.toString());
+    }
+    System.out.println("\n  Analysis of MD5 hashes:");
+    for(MyUUID m: uuids) {
+      System.out.println("\t UUID: " + m.toString() + " | MD5 = " + m.hash().toString(16));
+    }
   }
 
   public static void main(String[] args) throws IOException {
@@ -175,6 +254,8 @@ public class First
       parser.printUsage(System.err);
       System.err.println();
     }
+
+
     boolean bContinue = true;
     if (null != f.in_file) {
       bContinue = f.deserialize();
@@ -183,10 +264,13 @@ public class First
     }
     if (bContinue) {
       // do some calculation(s)
+      f.analyze();
+      f.hash();
 
       // write out JSON using Gson
       // https://github.com/google/gson/blob/master/UserGuide.md#gson-user-guide
       f.serialize();
     }
   }
+
 }
