@@ -21,13 +21,14 @@ Currently, no statistical analysis is done.
 
 ### Warnings
 You will get the warming:
-
+```
   WARNING: An illegal reflective access operation has occurred
   WARNING: Illegal reflective access by com.google.gson.internal.reflect.UnsafeReflectionAccessor (file:/Users/gparks/.gradle/caches/modules-2/files-2.1/com.google.code.gson/gson/2.8.6/9180733b7df8542621dc12e21e87557e8c99b8cb/gson-2.8.6.jar) to field java.security.MessageDigest.algorithm
   WARNING: Please consider reporting this to the maintainers of com.google.gson.internal.reflect.UnsafeReflectionAccessor
   WARNING: Use --illegal-access=warn to enable warnings of further illegal reflective access operations
   WARNING: All illegal access operations will be denied in a future release
-
+```
+This comes from gradle, and is a known issue, but I can't get it to go away...
 
 ### "Analysis"
 
